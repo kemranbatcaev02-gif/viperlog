@@ -4,36 +4,36 @@ use clap::{Parser, Subcommand};
 #[derive(Parser, Debug)]
 #[command(
     name = "viperlog",
-    author = "Kemran",
+    author = "kemranbatcaev02-gif",
     version = "0.1.0",
-    about = "⚡ Blisteringly fast, SIMD-accelerated log scrubber and PII masker",
-    long_about = "ViperLog scans text and structured logs for sensitive data (credit cards, tokens, emails, IPs) \
-using SIMD instructions and multi-threaded parallel processing."
+    about = "⚡ Сверхбыстрый утилизатор и цензор логов на Rust с SIMD-ускорением",
+    long_about = "ViperLog сканирует текст и структурированные логи на наличие конфиденциальных данных \
+(банковские карты, токены, email, IP) с использованием SIMD-инструкций и параллельной обработки."
 )]
 pub struct CliArgs {
     #[command(subcommand)]
     pub command: Option<Commands>,
 
-    /// Input file path (reads from STDIN if omitted)
+    /// Входной файл (по умолчанию STDIN)
     #[arg(short, long, global = true)]
     pub input: Option<PathBuf>,
 
-    /// Output file path (writes to STDOUT if omitted)
+    /// Выходной файл (по умолчанию STDOUT)
     #[arg(short, long, global = true)]
     pub output: Option<PathBuf>,
 
-    /// Run audit only: print detailed leak detection statistics without rewriting
+    /// Режим аудита: вывод статистики без перезаписи данных
     #[arg(short, long, global = true)]
     pub audit: bool,
 
-    /// Overwrite input file in-place with scrubbed content
+    /// Перезапись входного файла на месте
     #[arg(long, global = true)]
     pub in_place: bool,
 }
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Mask PII from logs (default mode)
+    /// Маскирование конфиденциальных данных
     Scrub {
         #[arg(short, long)]
         input: Option<PathBuf>,
@@ -42,12 +42,12 @@ pub enum Commands {
         output: Option<PathBuf>,
     },
 
-    /// Fast security audit: report detected leaks and throughput without modifying files
+    /// Аудит безопасности: отчет об утечках и скорость обработки без изменения файлов
     Audit {
-        /// Target log file to analyze
+        /// Путь к файлу логов для анализа
         file: PathBuf,
     },
 
-    /// Run an interactive demo showcasing PII detection and masking
+    /// Интерактивная демонстрация маскирования данных
     Demo,
 }
