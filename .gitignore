@@ -1,0 +1,14 @@
+/target
+Cargo.lock
+
+# Test and output artifacts
+*.log
+*.out
+clean.txt
+dirty.txt
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
