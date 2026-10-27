@@ -9,50 +9,49 @@
            |_|                          |___/  
 ```
 
-### ⚡ Blisteringly Fast, SIMD-Accelerated Log Scrubber & PII Masker
+### ⚡ Сверхбыстрый утилизатор и цензор логов на Rust с аппаратным SIMD-ускорением
 
-[![Crates.io](https://img.shields.io/badge/crates.io-v0.1.0-orange.svg)](https://crates.io)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Лицензия: MIT](https://img.shields.io/badge/Лицензия-MIT-blue.svg)](LICENSE)
 [![Rust: 1.80+](https://img.shields.io/badge/Rust-1.80%2B-blue?logo=rust)](https://www.rust-lang.org)
 [![SIMD: AVX2/SSE4.2](https://img.shields.io/badge/SIMD-AVX2%20%2F%20SSE4.2-green.svg)]()
-[![Zero Allocation](https://img.shields.io/badge/Zero--Copy-Clean%20Lines-brightgreen.svg)]()
+[![Zero Allocation](https://img.shields.io/badge/Zero--Copy-Чистые%20строки-brightgreen.svg)]()
 
-**ViperLog** is a high-throughput stream cleaner and security audit tool written in Rust.<br>
-It scrubs Personally Identifiable Information (PII) and secret credentials from logs, metrics, and JSON dumps at **multi-gigabyte per second speeds** using hardware SIMD vector instructions and multi-threaded parallel processing.
+**ViperLog** — это высокопроизводительная потоковая утилита и библиотека на Rust для аудита безопасности и очистки данных.<br>
+Маскирует конфиденциальные данные (PII: банковские карты, пароли, токены, ключи API) в терабайтах логов и дампов со скоростью в **несколько гигабайт в секунду** благодаря векторным инструкциям процессора SIMD и параллелизму на всех ядрах CPU.
 
-[Features](#-features) •
-[Why ViperLog?](#-the-problem-why-viperlog) •
-[Quickstart](#-quickstart) •
-[Supported Detectors](#-supported-pii--secret-detectors) •
-[Architecture](#-architecture) •
-[Benchmarks](#-benchmarks)
+[Возможности](#-проблема-почему-viperlog) •
+[Быстрый старт](#-быстрый-старт) •
+[Команды CLI](#-варианты-использования-cli) •
+[Поддерживаемые детекторы](#-поддерживаемые-типы-уязвимостей-и-pii) •
+[Архитектура](#-архитектура) •
+[Бенчмарки](#-производительность-и-бенчмарки)
 
 </div>
 
 ---
 
-## 🔥 The Problem: Why ViperLog?
+## 🔥 Проблема: Почему ViperLog?
 
-Compliance regulations (**GDPR, PCI-DSS, HIPAA, 152-ФЗ**) enforce severe penalties for leaking sensitive credentials or customer data into logging systems (Elasticsearch, Datadog, ClickHouse, CloudWatch).
+Регуляторные требования и законы о защите персональных данных (**152-ФЗ, GDPR, PCI-DSS, HIPAA**) накладывают жесткие штрафы за утечку учетных записей или клиентских данных в публичные хранилища логов (Elasticsearch, ClickHouse, Datadog, CloudWatch).
 
-However, traditional scrubbers (written in Python, Node.js, or unoptimized Go/Java):
-- **Consume 25%–40% of server CPU** running heavy regular expressions on every incoming line.
-- Become the primary bottleneck during high-load traffic spikes.
-- Suffer from massive false-positive rates (masking phone numbers or order IDs as credit cards).
+Однако стандартные решения (написанные на Python, Node.js или неоптимизированном Go/Java):
+- **Тратят от 25% до 40% ресурсов процессора** сервера только на постоянный прогон тяжелых регулярных выражений по каждой строчке.
+- Становятся главным "бутылочным горлышком" во время пиковых нагрузок на бэкенд.
+- Страдают от огромного количества ложных срабатываний (замазывая артикулы товаров, таймстемпы или телефонные номера под видом банковских карт).
 
-**ViperLog solves this at the hardware level:**
-1. 🏎️ **SIMD Pre-filtering:** Uses AVX2/SSE4.2 vector instructions via Aho-Corasick DFA to scan byte buffers at memory-bus speeds. Over 95% of clean log lines are verified and passed through with **zero heap allocations (`Cow::Borrowed`)**.
-2. 💳 **Algorithmic Validation (Luhn Check):** Credit card numbers are verified with a branchless Luhn checksum algorithm, eliminating false positives from order IDs, phone numbers, and timestamps.
-3. ⚡ **Parallel Work-Stealing:** Bounded chunk streaming powered by `rayon` saturates all CPU cores without unbounded RAM usage.
-4. 🛡️ **Flexible Integration:** Works seamlessly as a CLI utility, in Unix pipe chains (`cat app.log | viperlog > clean.log`), or as an embedded Rust crate.
+**ViperLog решает эти проблемы на уровне машинных инструкций:**
+1. 🏎️ **Аппаратный SIMD-префильтр:** Использует векторные инструкции AVX2/SSE4.2 через конечный автомат Ахо-Корасик, сканируя память на скорости системной шины. Более 95% чистых строк логов пропускаются с **нулевым выделением памяти в куче (`Cow::Borrowed`)**.
+2. 💳 **Алгоритмическая валидация (Алгоритм Луна):** Номера банковских карт проверяются по контрольной сумме Луна без ветвлений (branchless), гарантируя защиту от ложных срабатываний на случайных числах.
+3. ⚡ **Параллельная обработка (Work-Stealing):** Пакетный потоковый конвейер на базе библиотеки `rayon` полностью нагружает все ядра процессора без неконтролируемого расхода оперативной памяти.
+4. 🛡️ **Гибкость интеграции:** Работает как автономная консольная утилита, встраивается в цепочки пайплайнов Unix (`cat app.log | viperlog > clean.log`) или подключается напрямую как Rust-библиотека.
 
 ---
 
-## 🚀 Quickstart
+## 🚀 Быстрый старт
 
-### 1. Run the Interactive Demo
+### Интерактивная демонстрация работы
 
-Experience ViperLog masking credentials in real time:
+Запуск наглядного демо со сравнением логов ДО и ПОСЛЕ фильтрации:
 
 ```bash
 cargo run --release -- demo
@@ -63,25 +62,27 @@ cargo run --release -- demo
 │   ⚡ ViperLog    High-Speed SIMD Log & PII Scrubber │
 ╰───────────────────────────────────────────────────╯
 
-── [BEFORE: Raw Dirty Log (Contains Critical Leaks)] ──
+Executing interactive PII scrubbing demo...
+
+── [ДО: Исходный лог с критическими утечками данных] ──
 2026-10-27 19:40:12 [INFO] User login success: alice.smith@enterprise.com from ip 198.51.100.44
-2026-10-27 19:40:14 [WARN] Payment retry for customer: card 4532-0150-1234-5674 cvv 892 exp 12/28
-2026-10-27 19:40:15 [DEBUG] Auth header present: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4
+2026-10-27 19:40:14 [WARN] Payment retry for customer: card 4242-4242-4242-4242 cvv 892 exp 12/28
+2026-10-27 19:40:15 [DEBUG] Auth header present: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 2026-10-27 19:40:16 [ERROR] External API sync failed: endpoint="https://api.stripe.com/v1/charges" key=sk_mock_9988aabbccddee1122334455
 2026-10-27 19:40:18 [INFO] Uploading build report to S3 with access_key=AKIAIOSFODNN7EXAMPLE secret=password12345
 
-── [AFTER: Scrubbed Log (All PII Masked)] ──
+── [ПОСЛЕ: Очищенный лог (все уязвимости замаскированы)] ──
 2026-10-27 19:40:12 [INFO] User login success: a***h@enterprise.com from ip 198.51.***.*** 
-2026-10-27 19:40:14 [WARN] Payment retry for customer: card ****-****-****-5674 cvv 892 exp 12/28
+2026-10-27 19:40:14 [WARN] Payment retry for customer: card ****-****-****-4242 cvv 892 exp 12/28
 2026-10-27 19:40:15 [DEBUG] Auth header present: Bearer [REDACTED_JWT_TOKEN]
-2026-10-27 19:40:16 [ERROR] External API sync failed: endpoint="https://api.stripe.com/v1/charges" key=sk_test_************************
+2026-10-27 19:40:16 [ERROR] External API sync failed: endpoint="https://api.stripe.com/v1/charges" key=sk_*****************************
 2026-10-27 19:40:18 [INFO] Uploading build report to S3 with access_key=AKIA**************** secret=********
 
 === ViperLog Execution Summary (DEMO MODE) ===
-Total lines processed:            7
-Total data processed:       0.00 MB
-Time elapsed:                0.001s
-Throughput:                4.8 MB/s
+Total lines processed:              7
+Total data processed:         0.00 MB
+Time elapsed:                  0.001s
+Throughput:                  4.8 MB/s
 
 Sensitive Data Detections: 7 leaks found
 ──────────────────────────────────────────────────
@@ -97,46 +98,47 @@ Sensitive Data Detections: 7 leaks found
 
 ---
 
-## 🛠️ CLI Usage & Examples
+## 🛠️ Варианты использования CLI
 
-### 1. Pipe Mode (Zero overhead in shell pipelines)
+### 1. Потоковый режим (Pipe Mode)
+Встраивается в любые системные конвейеры shell без накладных расходов:
 ```bash
 cat /var/log/nginx/access.log | viperlog > /var/log/nginx/clean.log
 ```
 
-### 2. File In-Place Masking
+### 2. Прямая перезапись файла на месте (In-Place)
 ```bash
-# Scrubs sensitive data and updates the file directly
+# Маскирует конфиденциальные данные прямо внутри файла
 viperlog --in-place -i production.log
 ```
 
-### 3. Fast Security Audit (Non-destructive)
-Scan massive log archives at maximum disk I/O speeds to detect leaks without modifying files:
+### 3. Быстрый аудит безопасности (без изменения файла)
+Сканирование огромных архивов на предельной скорости диска для обнаружения утечек без перезаписи:
 ```bash
 viperlog audit /var/log/application.log
 ```
 
 ---
 
-## 🔒 Supported PII & Secret Detectors
+## 🔒 Поддерживаемые типы уязвимостей и PII
 
-| Category | Pattern / Entity | Masking Technique |
+| Категория | Паттерн / Сущность | Способ маскирования |
 | :--- | :--- | :--- |
-| **Credit Cards** | Visa, MasterCard, Amex, Discover, Mir | Luhn checksum verified; retains last 4 digits (`****-****-****-5674`) |
-| **Cloud Credentials** | AWS Access Key ID (`AKIA[0-9A-Z]{16}`) | Replaced with `AKIA****************` |
-| **Payment Secrets** | Stripe Secret API Keys (`sk_test_...`) | Replaced with `sk_test_****************` |
-| **Developer Tokens** | GitHub Personal Access Tokens (`ghp_...`) | Replaced with `ghp_****************` |
-| **Authentication** | JWT Tokens (`eyJ...`) | Replaced with `[REDACTED_JWT_TOKEN]` |
-| **Auth Headers** | `Bearer <token>` headers | Token hash masked with `********` |
-| **Passwords & Keys** | `password=...`, `secret: "..."`, `access_token` | Value masked with `********` |
-| **Personal Info** | Email Addresses (`alice@example.com`) | Preserves domain & edges: `a***e@example.com` |
-| **Network Data** | IPv4 Addresses (`192.168.1.100`) | Subnet masked: `192.168.***.***` |
+| **Банковские карты** | Visa, MasterCard, Amex, Discover, МИР | Проверка по алгоритму Луна; сохраняются 4 последние цифры (`****-****-****-4242`) |
+| **Облачные ключи** | AWS Access Key ID (`AKIA[0-9A-Z]{16}`) | Замена на `AKIA****************` |
+| **Платежные токены** | Секретные ключи API Stripe (`sk_...`) | Замена на `sk_*****************************` |
+| **Токены разработчика** | GitHub Personal Access Tokens (`ghp_...`) | Замена на `ghp_****************` |
+| **Аутентификация** | Токены JWT (`eyJ...`) | Замена на `[REDACTED_JWT_TOKEN]` |
+| **Заголовки авторизации**| Заголовки `Bearer <token>` | Хеш токена скрывается: `********` |
+| **Пароли и ключи** | `password=...`, `secret: "..."`, `access_token` | Значение заменяется на `********` |
+| **Персональные данные** | Email адреса (`alice@example.com`) | Сохраняется домен и границы: `a***e@example.com` |
+| **Сетевые данные** | IPv4 адреса (`192.168.1.100`) | Маскируется подсеть: `192.168.***.***` |
 
 ---
 
-## 📦 Using as a Rust Library
+## 📦 Использование как Rust-библиотеки
 
-Add to your `Cargo.toml`:
+Добавьте в `Cargo.toml`:
 ```toml
 [dependencies]
 viperlog = "0.1"
@@ -148,53 +150,52 @@ use viperlog::ScrubScanner;
 fn main() {
     let scanner = ScrubScanner::new();
 
-    let raw_log = "Error charging card 4532-0150-1234-5674 for user bob@example.com";
+    let raw_log = "Error charging card 4242-4242-4242-4242 for user bob@example.com";
     let result = scanner.scrub_line(raw_log);
 
-    println!("Scrubbed: {}", result.cleaned_text);
-    // Output: "Error charging card ****-****-****-5674 for user b*b@example.com"
+    println!("Результат: {}", result.cleaned_text);
+    // Вывод: "Error charging card ****-****-****-4242 for user b*b@example.com"
 
     for leak in result.matches {
-        println!("Found: {} at [{}..{}]", leak.pii_type, leak.start, leak.end);
+        println!("Найдена уязвимость: {} в диапазоне [{}..{}]", leak.pii_type, leak.start, leak.end);
     }
 }
 ```
 
 ---
 
-## 🏛️ Architecture
+## 🏛️ Архитектура
 
 ```mermaid
 flowchart LR
-    A["Raw Log Stream<br/>(File / STDIN)"] --> B["Chunk Buffer<br/>(256 KB)"]
-    B --> C["SIMD Anchor Pre-Filter<br/>(AVX2 / Aho-Corasick)"]
-    C -- "No Anchors Found<br/>(95% of lines)" --> D["Zero-Copy Pass<br/>(Cow::Borrowed)"]
-    C -- "Anchor Detected" --> E["Validator & Luhn Engine<br/>(Branchless Luhn / Regex)"]
-    E --> F["Zero-Alloc Masker<br/>(Cow::Owned)"]
-    D --> G["Clean Log Stream<br/>(STDOUT / Output File)"]
+    A["Входной поток логов<br/>(Файл / STDIN)"] --> B["Буфер чанков<br/>(256 КБ)"]
+    B --> C["SIMD Пре-фильтр<br/>(AVX2 / Ахо-Корасик)"]
+    C -- "Якоря не найдены<br/>(95% чистых строк)" --> D["Прямой пропуск Zero-Copy<br/>(Cow::Borrowed)"]
+    C -- "Обнаружен подозрительный фрагмент" --> E["Движок валидации и алгоритм Луна<br/>(Branchless Luhn / Regex)"]
+    E --> F["Маскирование без аллокаций<br/>(Cow::Owned)"]
+    D --> G["Чистый поток логов<br/>(STDOUT / Файл)"]
     F --> G
 ```
 
 ---
 
-## ⚡ Benchmarks
+## ⚡ Производительность и бенчмарки
 
-Run benchmarks using Criterion:
+Замеры на процессоре **12th Gen Intel(R) Core(TM) i5-12500H** (16 потоков):
 
+| Сценарий | Пропускная способность | Средняя задержка на строку |
+| :--- | :---: | :---: |
+| **Чистая строка лога (Zero-Copy)** | **~2.8 ГБ / сек** | **~28 наносекунд** |
+| **Грязная строка (полное маскирование PII)** | **~420 МБ / сек** | **~380 наносекунд** |
+
+Запуск бенчмарков:
 ```bash
 cargo bench
 ```
 
-Tested on **12th Gen Intel(R) Core(TM) i5-12500H** (16 threads):
-
-| Scenario | Throughput | Mean Latency per Line |
-| :--- | :---: | :---: |
-| **Clean Log Line (Zero-Copy Pass)** | **~2.8 GB/s** | **~28 nanoseconds** |
-| **Dirty Log Line (Full PII Masking)** | **~420 MB/s** | **~380 nanoseconds** |
-
 ---
 
-## 📄 License
+## 📄 Лицензия
 
-Licensed under the [MIT License](LICENSE).
-Feel free to use it in open source, infrastructure tools, or commercial products!
+Проект лицензирован под [MIT License](LICENSE).  
+Разрешено свободное использование в open-source и коммерческих проектах.
