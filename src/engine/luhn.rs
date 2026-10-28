@@ -1,3 +1,4 @@
+#[allow(clippy::manual_is_multiple_of)]
 pub fn validate_luhn(digits: &[u8]) -> bool {
     if digits.len() < 13 || digits.len() > 19 {
         return false;

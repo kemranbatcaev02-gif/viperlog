@@ -168,6 +168,12 @@ impl DetectorRegistry {
     }
 }
 
+impl Default for DetectorRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn mask_credit_card(card: &str) -> String {
     let digits_only: Vec<char> = card.chars().filter(|c| c.is_ascii_digit()).collect();
     let last4: String = digits_only.iter().rev().take(4).rev().collect();

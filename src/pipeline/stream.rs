@@ -171,3 +171,9 @@ impl StreamPipeline {
         }
     }
 }
+
+impl Default for StreamPipeline {
+    fn default() -> Self {
+        Self::new()
+    }
+}

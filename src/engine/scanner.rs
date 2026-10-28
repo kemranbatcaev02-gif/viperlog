@@ -81,6 +81,12 @@ impl ScrubScanner {
     }
 }
 
+impl Default for ScrubScanner {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
